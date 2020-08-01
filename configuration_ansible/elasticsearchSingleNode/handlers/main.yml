@@ -1,0 +1,18 @@
+---
+  # handlers file for elasticsearch
+  - name: restart elasticsearch
+    service: name=elasticsearch state=restarted
+  
+  # reload systemd after modification
+  - name: reload systemd
+    systemd: daemon_reload=yes
+  
+  - name: restart_kibana
+    service: name=kibana state=restarted
+
+  - name: restart_nginx
+    service: name=nginx state=restarted
+
+  - name: restart_logstash
+    service: name=logstash state=restarted
+  

@@ -1,0 +1,77 @@
+---
+  # Set vm.swappiness to 1 in /etc/sysctl.conf
+  - sysctl:
+      name: vm.swappiness
+      value: "{{ swapness }}"
+      state: present
+  
+  # Set virtual max area /etc/sysctl.conf
+  - sysctl:
+      name: vm.max_map_count
+      value: "{{ vm_max_count }}"
+      state: present
+  
+  # Install apt-transports package required for Installation of Elasticsearch
+  - name: install apt-transports
+    apt: name=apt-transport-https state=present update_cache=yes
+  
+  # Download elasticsearch
+  - name: Download deb.
+    get_url:
+      url: https://artifacts.elastic.co/downloads/{{ esurl }}-amd64.deb
+      dest: /tmp/elasticsearch-{{ elasticsearch_version }}.deb
+  
+  # enable openfile limit without restart
+  - name: enable open file witout restart
+    shell: "ulimit -n 4096"
+  
+  # Install deb file elasticsearch
+  - name: install elasticsearch
+    apt: deb=/tmp/elasticsearch-{{ elasticsearch_version }}.deb
+  
+  # Create directory for es_data and heap_dump storage
+  - name: Create data_path directory
+    file:
+      path: "{{ item }}"
+      state: directory
+      owner: elasticsearch
+      group: elasticsearch
+      mode: 0775
+      recurse: yes
+    with_items:
+      - "{{ data_path }}"
+      - "{{ es_jvm_dump }}"
+  
+  # Enable elaticsearch
+  - name: Enable elasticsearch
+    service: name=elasticsearch enabled=yes
+
+  # update environment for elasticsearch
+  - name: Configure elasticsearch service and environment
+    template:
+      src: "{{ item.name }}"
+      dest: "{{ item.path }}"
+    with_items:
+      - {name: 'limit.conf.j2', path: '/etc/security/limits.d/{{ es }}.conf'}
+      - {name: '{{ es_s }}.j2', path: '/usr/lib/systemd/system/{{ es_s }}'}
+  
+  # update elasticsearch config files
+  - name: Create elasticsearch configuration files.
+    template:
+      src: "{{ item.name }}"
+      dest: "{{ item.path }}"
+    with_items:
+      - {name: '{{ es }}.yml.j2', path: '/etc/elasticsearch/{{ es }}.yml'}
+      - {name: 'jvm.options.j2', path: '/etc/elasticsearch/jvm.options'}
+    notify:
+      - reload systemd
+      - restart elasticsearch
+
+  # Reload daemon
+  - name: Reload daemon
+    service: daemon_reload=yes
+
+  # Restart elasticsearch
+  - name: Restart elasticsearch
+    service: name=elasticsearch state=restarted
+  

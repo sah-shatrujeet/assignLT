@@ -1,0 +1,34 @@
+---
+    # Adding elastic key
+    - name: Add logstash apt key
+      apt_key:
+        url: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+        state: present
+    
+    # Adding elastic repo
+    - name: Add Logstash apt repository
+      apt_repository:
+        repo: "deb https://artifacts.elastic.co/packages/{{ logstash_version }}.x/apt stable main"
+        state: present
+        filename: 'elastic-{{ logstash_version }}.x'
+    
+    # Installing logstash specific version
+    - name: Install Logstash specific version
+      apt:
+        name: logstash=1:{{ logstash_specific_version }}-1
+        state: absent
+        update_cache: true
+      when: logstash_specific_version is defined
+      notify:
+        - restart_logstash
+    
+    # Installing logstash
+    - name: Install Logstash.
+      apt:
+        name: logstash
+        state: present
+        update_cache: true
+      when: logstash_specific_version is undefined
+      notify:
+        - restart_logstash
+    
