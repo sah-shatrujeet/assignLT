@@ -1,18 +1,28 @@
 ---
   # handlers file for elasticsearch
   - name: restart elasticsearch
+    become: yes
+    become_user: root
     service: name=elasticsearch state=restarted
   
   # reload systemd after modification
   - name: reload systemd
+    become: yes
+    become_user: root
     systemd: daemon_reload=yes
   
   - name: restart_kibana
+    become: yes
+    become_user: root
     service: name=kibana state=restarted
 
   - name: restart_nginx
+    become: yes
+    become_user: root
     service: name=nginx state=restarted
 
   - name: restart_logstash
+    become: yes
+    become_user: root
     service: name=logstash state=restarted
   

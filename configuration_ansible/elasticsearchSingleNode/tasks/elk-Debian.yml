@@ -1,0 +1,139 @@
+---
+  - name: Installing openjdk-8
+    become: yes
+    become_user: root
+    apt:
+      name: openjdk-8-jdk
+      state: present
+      update_cache: yes
+      
+  - name: Setting Java Home Path
+    shell:
+      cmd: export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+      warn: false
+
+  - name: Updating PATH variable
+    shell:
+      cmd: export PATH=$PATH:$JAVA_HOME/bin
+      warn: false
+
+  - name: Importing the Elasticsearch public GPG key into APT
+    shell:
+      cmd: wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+      warn: false
+
+  - name: Adding the Elastic source list to the sources.list.d directory
+    shell:
+      cmd: echo "deb https://artifacts.elastic.co/packages/7.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-7.x.list
+      warn: false
+    
+  - name: Updating repositories cache and install "Elasticsearch"
+    become: yes
+    become_user: root
+    apt:
+      name: elasticsearch
+      update_cache: yes
+
+  - name: Creating elasticsearch configuration files.
+    become: yes
+    become_user: root
+    template:
+      src: "elastic.yml.j2"
+      dest: "/etc/elasticsearch/elasticsearch.yml"
+
+  - name: Updating permission for /usr/share/elasticsearch
+    shell:
+      cmd: sudo chmod -R 777 /usr/share/elasticsearch/
+      warn: false
+
+  - name: Restarting elasticsearch
+    become: yes
+    become_user: root
+    service: name=elasticsearch state=restarted
+
+  - name: Enabling elasticsearch
+    become: yes
+    become_user: root
+    service: name=elasticsearch enabled=yes
+
+  - name: Installing kibana
+    become: yes
+    become_user: root
+    apt:
+      name: kibana
+      state: present
+      update_cache: yes
+
+  - name: Restarting kibana
+    become: yes
+    become_user: root
+    service: name=kibana state=restarted
+  
+  - name: Enabling kibana
+    become: yes
+    become_user: root
+    service: name=kibana enabled=yes
+
+  - name: Installing Kibana dependencies ...
+    become: yes
+    become_user: root
+    apt: name={{ item }} state=present
+    with_items:
+      - nginx
+      - apache2-utils
+
+  - name: Installing passlib (required for writing htpasswd file)...
+    become: yes
+    become_user: root
+    apt:
+      name: python3-passlib
+      state: present
+
+  - name: Creating htpasswd file to restrict access to Kibana web interface...
+    become: yes
+    become_user: root
+    htpasswd:
+      name: "{{ elk_kibana_username }}"
+      password: "{{ elk_kibana_password }}"
+      path: /etc/nginx/htpasswd.users
+
+  - name: Adding Nginx configuration file ...
+    become: yes
+    become_user: root
+    template: src=nginx.j2 dest=/etc/nginx/sites-available/default
+
+  - name: Restarting Kibana
+    become: yes
+    become_user: root
+    service: name=kibana state=restarted
+
+  - name: Restarting Nginx
+    become: yes
+    become_user: root
+    service: name=nginx state=restarted
+
+  - name: Installing logstash
+    become: yes
+    become_user: root
+    apt:
+      name: logstash
+      state: present
+
+  - name: Creating logstash configuration files.
+    become: yes
+    become_user: root
+    template:
+      src: "logstash.j2"
+      dest: "/etc/logstash/conf.d/io.conf"
+    notify:
+      - restart_logstash
+
+  - name: Enabling logstash
+    become: yes
+    become_user: root
+    service: name=logstash enabled=yes
+
+  - name: Restarting logstash
+    become: yes
+    become_user: root
+    service: name=logstash state=restarted

@@ -1,11 +1,4 @@
 ---
-  # tasks file for logstash
-  
   - name: Include OS Specific task for Elasticsearch
-    include_tasks: es-{{ ansible_os_family }}.yml
+    include_tasks: elk-{{ ansible_os_family }}.yml
 
-  - name: Include OS Specific tasks for Kibana
-    include_tasks: kibana-{{ ansible_os_family }}.yml
-
-  - name: Include OS Specific tasks for Logstash
-    include_tasks: logstash-{{ ansible_os_family }}.yml
